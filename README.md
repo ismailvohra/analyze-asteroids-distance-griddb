@@ -37,6 +37,9 @@ For the data visualization and analysis, we will be using the following library 
 
 var griddb = require('griddb_node');
 
+const dfd = require("danfojs-node")
+var fs     = require('fs');
+
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const csvWriter = createCsvWriter({
   path: 'out.csv',
@@ -249,3 +252,83 @@ df.loc({columns:['id',
 ```
 
 
+We access the data from the GridDB container as follows:
+```javascript
+
+    # Get the containers
+    obtained_data = gridstore.get_container("redwinequality")
+    
+    # Fetch all rows - language_tag_container
+    query = obtained_data.query("select *")
+```
+
+We will now look at a summary of statistics for the columns mentioned below to check their minimums, maximums, means, standard deviations etc.
+
+
+```javascript
+df.loc({columns:['est_diameter_min','est_diameter_max','relative_velocity','miss_distance']}).describe().round(2).print()
+
+// Output
+// ╔════════════╤═══════════════════╤═══════════════════╤═══════════════════╤═══════════════════╗
+// ║            │ est_diameter_min  │ est_diameter_max  │ relative_velocity │ miss_distance     ║
+// ╟────────────┼───────────────────┼───────────────────┼───────────────────┼───────────────────╢
+// ║ count      │ 90836             │ 90836             │ 90836             │ 9.1e+04           ║
+// ╟────────────┼───────────────────┼───────────────────┼───────────────────┼───────────────────╢
+// ║ mean       │ 0.13              │ 0.28              │ 48066             │ 3.71e+07          ║
+// ╟────────────┼───────────────────┼───────────────────┼───────────────────┼───────────────────╢
+// ║ std        │ 0.29              │ 0.67              │ 25293             │ 2.24e+07          ║
+// ╟────────────┼───────────────────┼───────────────────┼───────────────────┼───────────────────╢
+// ║ min        │ 0.00061           │ 0.0014            │ 203               │ 6.74e+03          ║
+// ╟────────────┼───────────────────┼───────────────────┼───────────────────┼───────────────────╢
+// ║ median     │ 0.05              │ 0.11              │ 44190             │ 3.78e+07          ║
+// ╟────────────┼───────────────────┼───────────────────┼───────────────────┼───────────────────╢
+// ║ max        │ 38                │ 85                │ 236990            │ 7.50e+07          ║
+// ╟────────────┼───────────────────┼───────────────────┼───────────────────┼───────────────────╢
+// ║ variance   │ 8.91e-02          │ 4.45e-01          │ 6.40e+08          │ 4.99e+14          ║
+// ╚════════════╧═══════════════════╧═══════════════════╧═══════════════════╧═══════════════════╝
+```
+Now Plotting a Scatter Plot between Quality and the other Columns.
+
+```javascript
+## Scatter Plot between miss_distance and relative_velocity
+let cols = [...cols]
+cols.pop('miss_distance')
+for(let i = 0; i < cols.length; i++)
+{
+    let data = [{
+        x: df[cols[i]].values,
+        y: df['miss_distance'].values,
+        type: 'scatter',
+        mode: 'markers'}];
+    let layout = {
+        height: 400,
+        width: 700,
+        title: 'Missing Distance from Earth vs '+cols[i],
+        xaxis: {title: cols[i]},
+        yaxis: {title: 'Miss Distance'}};
+    // There is no HTML element named `myDiv`, hence the plot is displayed below.
+    Plotly.newPlot('myDiv', data, layout);    
+}
+```
+
+The plot for two example columns is below:
+![ScatterExample](./Images/Scatterplot.png)
+
+The plot above shows that the two variables have a positive linear relationship with other, which means that the greater missing distance from Earth, the greater the relative velocity since the asteroid would not be under the gravitational effect of Earth.
+
+
+```javascript
+## Correlation plot of the columns to see how these variables or factors related to each other
+correlogram(data)
+```
+The Correlation plot is below:
+![CorrelationExample](./Images/Correlationplot.png)
+
+The correlation plot above shows the values for the variables, and the higher the value, the closer the relationships are between them. Thus, it is clear that miss distance and relative velocity have the highest values (0.33), indicating that they are the two most crucial variables in determining the point of impact for asteroid on Earth. The same variables will, however, naturally have the strongest correlations among themselves, so we disregard the diagonal above in the correlation plot.
+
+
+**Conclusion:**
+
+NASA scientists consider a variety of variables when determining whether or not an asteroid will strike the Earth, and if it does, they need to know the precise coordinates in order to save as many precious human lives as possible.
+
+Finally, all of this data analysis was done using GridDB because it facilitated quick access to and effective reading, writing, and storing of data.
